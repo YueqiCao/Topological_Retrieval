@@ -52,13 +52,13 @@ def split_act_data(feat, label, fns, anno_fn):
     training_inx, validation_inx = [], []
 
     for feat_fn in fns:
-        # 找到文件名及对应clip_id
+        # 找到文件名及对应clip_id   Find the file name and corresponding clip_id
         key = feat_fn.split('.')[0].split('_')[-1]
         key = '_'.join(feat_fn.split('.')[0].split('_')[2:])
         clip_inx = feat_fn.split('.')[0].split('_')[0]
         clip_inx = int(clip_inx)
 
-        # 取出标注
+        # 取出标注 Remove label
         video_anno = anno_tr[key]
         if video_anno['subset'] == 'validation':
             training_inx.append(False), validation_inx.append(True)
