@@ -4,14 +4,14 @@ import torch
 class Metric():
     def __init__(self,label_set,son2parent):
         
-        self.label_set = label_set # 这是sort过的label_set
+        self.label_set = label_set # 这是sort过的label_set This is the sorted label_set
         
         self.son2parent = son2parent
         self.G = nx.Graph()
         for son,parent in self.son2parent.items():
-            self.G.add_edge(son, parent) #　添加节点并链接节点
+            self.G.add_edge(son, parent) #　添加节点并链接节点 Add nodes and link nodes
         
-        shortest_path_gen = nx.all_pairs_shortest_path(self.G) # 最短路存在一个generator数据结构中
+        shortest_path_gen = nx.all_pairs_shortest_path(self.G) # 最短路存在一个generator数据结构中  The shortest path exists in a generator data structure
         self.shortest_path_dict = dict(shortest_path_gen)
         self.hop_matrix = self._get_hops_matrix() # n_cls x n_cls Matrix, whose (i,j) store hops from label i to j.
     
@@ -66,8 +66,8 @@ class Metric():
         for i in range(n):
             x_pos = ybatch[i] # 1 x 1
             y_pos = ypred_topk[i] # 1 x k
-            hop_dist = self.hop_matrix[x_pos, y_pos] # pred_i与ybatch_i 之间的距离
-            correct_inx[i,:] = (hop_dist <= hop) # i号ground truth所能认为正确的所有类别，其列号标为1
+            hop_dist = self.hop_matrix[x_pos, y_pos] # pred_i与ybatch_i 之间的距离 The distance between pred_i and ybatch_i
+            correct_inx[i,:] = (hop_dist <= hop) # i号ground truth所能认为正确的所有类别，其列号标为1 All categories that can be considered correct by the i-number ground truth are marked as 1
 
         numerator = [correct_inx[:,:i+1].sum(dim=1) for i in range(k)]
         numerator = torch.stack(numerator).t()

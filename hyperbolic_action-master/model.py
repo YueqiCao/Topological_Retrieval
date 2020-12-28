@@ -533,7 +533,8 @@ class CVPR19Net(nn.Module):
         self.son2parent = son2parent
         self.emb = emb
         self.metric = metric
-        
+        self.metric = metric
+
     def forward(self, x):
         hidden1 = self.dense1(x)
         action1 = self.leaky1(hidden1)
