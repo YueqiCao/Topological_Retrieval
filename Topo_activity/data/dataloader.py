@@ -6,7 +6,7 @@ import json
 import random
 from torch.utils.data import Dataset, DataLoader
 from collections import defaultdict as ddict
-from graph_dataset import BatchedDataset
+from data.graph_dataset import BatchedDataset
 
 
 class TreeDataset(Dataset):
