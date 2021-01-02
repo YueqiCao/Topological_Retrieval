@@ -6,6 +6,67 @@ from model import get_model
 import argparse
 import logging
 from rsgd import RiemannianSGD
+from checkpoint import LocalCheckpoint
+import torch.multiprocessing as mp
+import sys
+import json
+import shutil
+import train
+from eval_utils import eval_reconstruction
+from hypernymy_eval import main as hype_eval
+
+def reconstruction_eval(adj, opt, epoch, elapsed, loss, pth, best):
+    chkpnt = torch.load(pth, map_location='cpu')
+    model = get_model(opt, chkpnt['embeddings'].size(0))
+    model.load_state_dict(chkpnt['model'])
+
+    meanrank, maprank = eval_reconstruction(adj, model)
+    sqnorms = model.manifold.norm(model.lt)
+    return {
+        'epoch': epoch,
+        'elapsed': elapsed,
+        'loss': loss,
+        'sqnorm_min': sqnorms.min().item(),
+        'sqnorm_avg': sqnorms.mean().item(),
+        'sqnorm_max': sqnorms.max().item(),
+        'mean_rank': meanrank,
+        'map_rank': maprank,
+        'best': bool(best is None or loss < best['loss']),
+    }
+
+
+def hypernymy_eval(epoch, elapsed, loss, pth, best):
+    _, summary = hype_eval(pth, cpu=True)
+    return {
+        'epoch': epoch,
+        'elapsed': elapsed,
+        'loss': loss,
+        'best': bool(
+            best is None or summary['eval_hypernymy_avg'] > best['eval_hypernymy_avg'])
+        ,
+        **summary
+    }
+
+def async_eval(adj, q, logQ, opt):
+    best = None
+    while True:
+        temp = q.get()
+        if temp is None:
+            return
+
+        if not q.empty():
+            continue
+
+        epoch, elapsed, loss, pth = temp
+        if opt.eval == 'reconstruction':
+            lmsg = reconstruction_eval(adj, opt, epoch, elapsed, loss, pth, best)
+        elif opt.eval == 'hypernymy':
+            lmsg = hypernymy_eval(epoch, elapsed, loss, pth, best)
+        else:
+            raise ValueError(f'Unrecognized evaluation: {opt.eval}')
+        best = lmsg if lmsg['best'] else best
+        logQ.put((lmsg, pth))
+
 
 def run_train(args):
     dataset = TreeDataset(args.json_path, negs=args.negs,
@@ -19,6 +80,79 @@ def run_train(args):
 
     model = get_model(args,len(dataset.objects))
     optimizer = RiemannianSGD(model.optim_params(), lr=args.lr)
+    # setup checkpoint
+    checkpoint = LocalCheckpoint(
+        args.logdir,
+        include_in_all={'conf' : vars(args), 'objects' : data.objects},
+        start_fresh=True
+    )
+
+    state = checkpoint.initialize({'epoch': 0, 'model': model.state_dict()})
+    model.load_state_dict(state['model'])
+    args.epoch_start = state['epoch']
+
+    adj = {}
+    for inputs, _ in data:
+        for row in inputs:
+            x = row[0].item()
+            y = row[1].item()
+            if x in adj:
+                adj[x].add(y)
+            else:
+                adj[x] = {y}
+
+    controlQ, logQ = mp.Queue(), mp.Queue()
+    control_thread = mp.Process(target=async_eval, args=(adj, controlQ, logQ, args))
+    control_thread.start()
+
+    # control closure
+    def control(model, epoch, elapsed, loss):
+        """
+        Control thread to evaluate embedding
+        """
+        lt = model.w_avg if hasattr(model, 'w_avg') else model.lt.weight.data
+        model.manifold.normalize(lt)
+
+        checkpoint.path = f'{args.checkpoint}.{epoch}'
+        checkpoint.save({
+            'model': model.state_dict(),
+            'embeddings': lt,
+            'epoch': epoch,
+            'model_type': args.model,
+        })
+
+        controlQ.put((epoch, elapsed, loss, checkpoint.path))
+
+        while not logQ.empty():
+            lmsg, pth = logQ.get()
+            shutil.move(pth, args.checkpoint)
+            if lmsg['best']:
+                shutil.copy(args.checkpoint, args.checkpoint + '.best')
+            args.log.info(f'json_stats: {json.dumps(lmsg)}')
+
+    control.checkpoint = True
+    model = model.to(args.device)
+    if hasattr(model, 'w_avg'):
+        model.w_avg = model.w_avg.to(args.device)
+    if args.train_threads > 1:
+        threads = []
+        model = model.share_memory()
+        args_ = (args.device, model, data, optimizer, args, log)
+        kwargs = {'ctrl': control, 'progress' : not args.quiet}
+        for i in range(args.train_threads):
+            kwargs['rank'] = i
+            threads.append(mp.Process(target=train.train, args=args_, kwargs=kwargs))
+            threads[-1].start()
+        [t.join() for t in threads]
+    else:
+        train.train(args.device, model, data, optimizer, args, log, ctrl=control,
+            progress=not args.quiet)
+    controlQ.put(None)
+    control_thread.join()
+    while not logQ.empty():
+        lmsg, pth = logQ.get()
+        shutil.move(pth, args.checkpoint)
+        log.info(f'json_stats: {json.dumps(lmsg)}')
 
 
 if __name__ == '__main__':
@@ -49,13 +183,15 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100)
     # OS
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('-train_threads', type=int, default=1,
+                        help='Number of threads to use in training')
     parser.add_argument('--gpu', type=str, default='0')
 
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     args.cuda = torch.cuda.is_available()
-    device = torch.device("cuda" if args.cuda else "cpu")
+    args.device = torch.device("cuda" if args.cuda else "cpu")
 
     if args.seed == -1: args.seed = int(torch.randint(0, 2 ** 32 - 1, (1,)).item())
     print('seed', args.seed)
@@ -73,4 +209,8 @@ if __name__ == '__main__':
     if not os.path.exists(args.logdir):
         os.makedirs(args.logdir)
 
+    log_level = logging.INFO
+    log = logging.getLogger('lorentz')
+    logging.basicConfig(level=log_level, format='%(message)s', stream=sys.stdout)
+    args.log = log
     run_train(args)
