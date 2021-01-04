@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from . import build_model
+from model import get_model
 from hypernymysuite.base import HypernymySuiteModel
 from hypernymysuite.evaluation import all_evaluations
 import torch as th
@@ -21,7 +21,7 @@ def download_data():
 
 class EntailmentConeModel(HypernymySuiteModel):
     def __init__(self, chkpnt, **kwargs):
-        self.model = build_model(chkpnt['conf'], len(chkpnt['model']['lt.weight']))
+        self.model = get_model(chkpnt['conf'], len(chkpnt['model']['lt.weight']))
         self.model.load_state_dict(chkpnt['model'])
         self.vocab = {w : i for i, w in enumerate(chkpnt['objects'])}
         self.vocab['<OOV>'] = 0

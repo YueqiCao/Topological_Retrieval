@@ -34,6 +34,8 @@ class LocalCheckpoint(object):
         self.path = path
         self.start_fresh = start_fresh
         self.include_in_all = {} if include_in_all is None else include_in_all
+        del self.include_in_all['conf']['device']
+        del self.include_in_all['conf']['log']
 
     def initialize(self, params):
         if not self.start_fresh and os.path.isfile(self.path):
@@ -46,7 +48,7 @@ class LocalCheckpoint(object):
     def save(self, params, tries=10):
         try:
             with PathManager.open(self.path, 'wb') as fout:
-                torch.save({**self.include_in_all, **params}, fout)
+                    torch.save({**self.include_in_all, **params}, fout)
         except Exception as err:
             if tries > 0:
                 print(f'Exception while saving ({err})\nRetrying ({tries})')

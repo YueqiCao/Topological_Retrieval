@@ -11,7 +11,7 @@ import torch.multiprocessing as mp
 import sys
 import json
 import shutil
-import train
+from train_model import train
 from eval_utils import eval_reconstruction
 from hypernymy_eval import main as hype_eval
 
@@ -82,8 +82,8 @@ def run_train(args):
     optimizer = RiemannianSGD(model.optim_params(), lr=args.lr)
     # setup checkpoint
     checkpoint = LocalCheckpoint(
-        args.logdir,
-        include_in_all={'conf' : vars(args), 'objects' : data.objects},
+        args.checkpoint,
+        include_in_all={ 'conf' : vars(args).copy(), 'objects' : data.objects},
         start_fresh=True
     )
 
@@ -141,11 +141,11 @@ def run_train(args):
         kwargs = {'ctrl': control, 'progress' : not args.quiet}
         for i in range(args.train_threads):
             kwargs['rank'] = i
-            threads.append(mp.Process(target=train.train, args=args_, kwargs=kwargs))
+            threads.append(mp.Process(target=train, args=args_, kwargs=kwargs))
             threads[-1].start()
         [t.join() for t in threads]
     else:
-        train.train(args.device, model, data, optimizer, args, log, ctrl=control,
+        train(args.device, model, data, optimizer, args, log, ctrl=control,
             progress=not args.quiet)
     controlQ.put(None)
     control_thread.join()
@@ -158,7 +158,7 @@ def run_train(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     # Logging
-    parser.add_argument('--exp_name', type=str, default='dev')
+    parser.add_argument('--exp_name', type=str, default='activity_net')
     parser.add_argument('--exp_root', type=str, default='./experiments')
     parser.add_argument('--restore', type=bool, default=False)
     # Dataset
@@ -169,21 +169,26 @@ if __name__ == '__main__':
     parser.add_argument('--neg_multiplier', type=float, default=1.0)
 
     # Model
-    parser.add_argument('-dim', type=int, default=5, help='Embedding dimension')
-    parser.add_argument('-manifold', type=str, default='lorentz')
-    parser.add_argument('-model', type=str, default='distance', help='Energy function model')
-    parser.add_argument('-margin', type=float, default=0.1, help='Hinge margin')
+    parser.add_argument('--dim', type=int, default=5, help='Embedding dimension')
+    parser.add_argument('--manifold', type=str, default='lorentz')
+    parser.add_argument('--model', type=str, default='distance', help='Energy function model')
+    parser.add_argument('--margin', type=float, default=0.1, help='Hinge margin')
+    parser.add_argument('--eval', choices=['reconstruction', 'hypernymy'],
+                        default='reconstruction', help='Which type of eval to perform')
 
     # Optimization
-    parser.add_argument('-sparse', default=False, action='store_true', help='Use sparse gradients for embedding table')
-    parser.add_argument('-lr', type=float, default=0.3, help='Learning rate')
+    parser.add_argument('--sparse', default=True, action='store_true', help='Use sparse gradients for embedding table')
+    parser.add_argument('--lr', type=float, default=0.3, help='Learning rate')
     # General
     parser.add_argument('--batch_size', type=int, default=10)
-    parser.add_argument('--burnin', type=int, default=20)
-    parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--quiet', action='store_true', default=False)
+    parser.add_argument('--eval_each', type=int, default=1,
+                        help='Run evaluation every n-th epoch')
+    parser.add_argument('--burnin', type=int, default=50)
+    parser.add_argument('--epochs', type=int, default=800)
     # OS
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('-train_threads', type=int, default=1,
+    parser.add_argument('--train_threads', type=int, default=1,
                         help='Number of threads to use in training')
     parser.add_argument('--gpu', type=str, default='0')
 
@@ -209,8 +214,17 @@ if __name__ == '__main__':
     if not os.path.exists(args.logdir):
         os.makedirs(args.logdir)
 
+    args.checkpoint = os.path.join(args.logdir, args.exp_name)
+
     log_level = logging.INFO
     log = logging.getLogger('lorentz')
     logging.basicConfig(level=log_level, format='%(message)s', stream=sys.stdout)
     args.log = log
+
+    # with open(os.path.join(args.logdir,'config.json'),'w') as f :
+    #     t  = vars(args)
+    #     del t['device'],
+    #     del t['log']
+    #     json.dump(t, f)
+
     run_train(args)
