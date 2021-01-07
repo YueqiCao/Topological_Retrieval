@@ -5,11 +5,20 @@ import numpy as np
 import json
 import random
 from torch.utils.data import Dataset, DataLoader
+import torchvision
 from collections import defaultdict as ddict
 from data.graph_dataset import BatchedDataset
-
+from torch.utils.data.dataset import T_co
+import glob
+import os
+from PIL import Image
+from tqdm import tqdm
+import cv2
 
 class TreeDataset(Dataset):
+    def __getitem__(self, index) -> T_co:
+        raise NotImplementedError
+
     def __init__(self,json_path,**kwargs):
         super(TreeDataset, self).__init__()
         self.json_path = json_path
@@ -20,22 +29,20 @@ class TreeDataset(Dataset):
 
         # Dataset Hparams
         self.negs = kwargs.get('negs',50)
-        self.batch_size = kwargs.get('batch_size',12800)
-        self.ndproc = kwargs.get('ndproc',8) # 'Number of data loading processes'
+        self.batch_size = kwargs.get('batch_size',28)
+        self.ndproc = kwargs.get('ndproc',4) # 'Number of data loading processes'
         self.burnin = kwargs.get('burnin',20)
         self.dampening = kwargs.get('dampening',0.75) # 'Sample dampening during burnin'
         self.neg_multiplier = kwargs.get('neg_multiplier',1.0)
 
 
         self.idx, self.objects, self.weights = self.get_hypernymity()
-        # self.videos = self.get_videos()
+        # self.idx_2, self.objects_2, self.weights_2 = self.load_edge_list(path = '../others/poincare-embeddings-master/wordnet/mammal_closure.csv')
 
     def get_graph_dataset(self):
-
         data = BatchedDataset(self.idx, self.objects, self.weights, self.negs, self.batch_size,
                           self.ndproc, self.burnin > 0, self.dampening)
         data.neg_multiplier = self.neg_multiplier
-
         return data
 
     def get_hypernymity(self):
@@ -48,17 +55,87 @@ class TreeDataset(Dataset):
         weights = np.ones([len(idx)])
         return idx, objects.tolist(), weights
 
-    def get_videos(self,activity,subset):
+
+class VideoDataset(TreeDataset):
+    def __init__(self, json_path, video_path, csv_path, class_idx_path, window=10, mode='training'):
+        super(VideoDataset, self).__init__(json_path)
+        self.video_path = video_path
+
+        self.dataframe = pd.read_csv(csv_path)
+        self.df = self.dataframe[self.dataframe['subset']==mode]
+        self.df = self.df.drop(self.df[self.df['end_frame'] == self.df['start_frame']].index, axis=0)
+        self.df = self.df.drop(self.df[(self.df['end_frame'] - self.df['start_frame'])<window].index, axis=0)
+
+        with open(class_idx_path, 'rb') as f_in:
+            self.class_to_index = pickle.load(f_in)
+
+        self.window = window
+        self.df['idxs'] = self.window_df()
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, item):
+        entry = self.df.loc[item]
+        label = self.class_to_index[entry['label']]
+        frames = []
+        for i in entry['idxs']:
+            img = cv2.imread(os.path.join(self.video_path,'v_{}'.format(entry['video_id']),str(label),'frame_{}.png'.format(i)),0)
+            img = img/255
+            frames.append(torch.from_numpy(img))
+        frames = torch.stack(frames,0)
+        return frames
+
+    def window_df(self):
+        id = []
+        for (j,x) in tqdm(self.df.iterrows(),total=len(self.df)):
+            duration_frames = x['end_frame'] - x['start_frame']
+            step = int(duration_frames  / self.window)
+
+            idxs_ = list(range(x['start_frame']+int(step/2), x['end_frame'], step))
+
+            id.append(idxs_[:self.window])
+
+        return id
+
+    def get_videos(self, activity, subset='training'):
         videos = []
         for x in self.database:
             if self.database[x]["subset"] != subset: continue
-            xx = random.choice(self.database[x]["annotations"])
+            # xx = random.choice(self.database[x]["annotations"])
+            xx = self.database[x]["annotations"]
+            if len(xx) == 0: continue
+
+            xx = xx[0]
             if xx["label"] == activity:
                 yy = {"videoid": x, "duration": self.database[x]["duration"],
                       "start_time": xx["segment"][0], "end_time": xx["segment"][1]}
                 videos.append(yy)
         return random.choice(videos)
 
+    def get_sample_frame_from_video(self, videoid, duration, start_time, end_time, window = 10, img_size=64):
+        path = os.path.join(self.video_path, "v_%s" % videoid)
+        frames_names = glob.glob(os.path.join(path,'*.jpg'))
+        nr_frames = len(frames_names)
+        fps = (nr_frames * 1.0) / duration
+        start_frame, end_frame = int(start_time * fps), int(end_time * fps)
+
+        idxs = np.random.randint(start_frame,end_frame, window)
+
+        transfs = torch.nn.Sequential(torchvision.transforms.Grayscale(),
+                                    torchvision.transforms.Resize(img_size),
+                                      )
+
+        frames = []
+
+        for idx in idxs:
+            img = Image.open(frames_names[idx])
+            img = torchvision.transforms.ToTensor(img)
+            img = transfs(img)
+            frames.append(img)
+
+        frames = torch.stack(frames,0)
+        return frames
 
 
 if __name__ == '__main__':
@@ -66,9 +143,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--json_path', type=str, default="../hyperbolic_action-master/activity_net.v1-3.json")
-    parser.add_argument('--video_path', type=str, default="/data/Activity_net/Video_jpg")
+    parser.add_argument('--video_path', type=str, default="/data/Activity_net/processed_jpg")
+    parser.add_argument('--csv_path', type=str, default='./activity_net.csv')
+    parser.add_argument('--class_idx_path', type=str, default='./class_indx.pkl')
 
     args = parser.parse_args()
-    dataset = TreeDataset(args.json_path)
-    data = dataset.get_graph_dataset()
+    # dataset = TreeDataset(args.json_path)
+    dataset = VideoDataset(args.json_path, args.video_path, args.csv_path, args.class_idx_path)
+    # data = dataset.get_graph_dataset()
+    dataset.__getitem__(3015)
 

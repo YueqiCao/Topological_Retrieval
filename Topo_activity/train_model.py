@@ -15,7 +15,7 @@ from torch.utils import data as torch_data
 _lr_multiplier = 0.1
 
 
-def train(
+def train_tree(
         device,
         model,
         data,

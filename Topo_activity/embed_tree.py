@@ -11,7 +11,7 @@ import torch.multiprocessing as mp
 import sys
 import json
 import shutil
-from train_model import train
+from train_model import train_tree as train
 from eval_utils import eval_reconstruction
 from hypernymy_eval import main as hype_eval
 
@@ -158,7 +158,7 @@ def run_train(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     # Logging
-    parser.add_argument('--exp_name', type=str, default='activity_net')
+    parser.add_argument('--exp_name', type=str, default='dev')
     parser.add_argument('--exp_root', type=str, default='./experiments')
     parser.add_argument('--restore', type=bool, default=False)
     # Dataset
