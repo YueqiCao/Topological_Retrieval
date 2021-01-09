@@ -65,7 +65,7 @@ class VideoDataset(TreeDataset):
         self.df = self.dataframe[self.dataframe['subset']==mode]
         self.df = self.df.drop(self.df[self.df['end_frame'] == self.df['start_frame']].index, axis=0)
         self.df = self.df.drop(self.df[(self.df['end_frame'] - self.df['start_frame'])<window].index, axis=0)
-
+        self.df = self.df.reset_index(drop=True)
         with open(class_idx_path, 'rb') as f_in:
             self.class_to_index = pickle.load(f_in)
 
@@ -84,60 +84,26 @@ class VideoDataset(TreeDataset):
             img = img/255
             frames.append(torch.from_numpy(img))
         frames = torch.stack(frames,0)
-        return frames
+        return frames, label# , entry['index']
+
+
 
     def window_df(self):
         id = []
         for (j,x) in tqdm(self.df.iterrows(),total=len(self.df)):
             duration_frames = x['end_frame'] - x['start_frame']
-            step = int(duration_frames  / self.window)
+            if self.window == -1:
+                step = 1
+            else:
+                step = int(duration_frames  / self.window)
 
-            idxs_ = list(range(x['start_frame']+int(step/2), x['end_frame'], step))
+            idxs_ = list(range(max(x['start_frame']+int(step/2),1), x['end_frame'], step))
 
             id.append(idxs_[:self.window])
 
         return id
 
-    def get_videos(self, activity, subset='training'):
-        videos = []
-        for x in self.database:
-            if self.database[x]["subset"] != subset: continue
-            # xx = random.choice(self.database[x]["annotations"])
-            xx = self.database[x]["annotations"]
-            if len(xx) == 0: continue
-
-            xx = xx[0]
-            if xx["label"] == activity:
-                yy = {"videoid": x, "duration": self.database[x]["duration"],
-                      "start_time": xx["segment"][0], "end_time": xx["segment"][1]}
-                videos.append(yy)
-        return random.choice(videos)
-
-    def get_sample_frame_from_video(self, videoid, duration, start_time, end_time, window = 10, img_size=64):
-        path = os.path.join(self.video_path, "v_%s" % videoid)
-        frames_names = glob.glob(os.path.join(path,'*.jpg'))
-        nr_frames = len(frames_names)
-        fps = (nr_frames * 1.0) / duration
-        start_frame, end_frame = int(start_time * fps), int(end_time * fps)
-
-        idxs = np.random.randint(start_frame,end_frame, window)
-
-        transfs = torch.nn.Sequential(torchvision.transforms.Grayscale(),
-                                    torchvision.transforms.Resize(img_size),
-                                      )
-
-        frames = []
-
-        for idx in idxs:
-            img = Image.open(frames_names[idx])
-            img = torchvision.transforms.ToTensor(img)
-            img = transfs(img)
-            frames.append(img)
-
-        frames = torch.stack(frames,0)
-        return frames
-
-
+# FOR TESTING
 if __name__ == '__main__':
     import argparse
 
@@ -151,5 +117,5 @@ if __name__ == '__main__':
     # dataset = TreeDataset(args.json_path)
     dataset = VideoDataset(args.json_path, args.video_path, args.csv_path, args.class_idx_path)
     # data = dataset.get_graph_dataset()
-    dataset.__getitem__(3015)
+
 

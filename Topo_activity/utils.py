@@ -1,7 +1,6 @@
-
-
 import torch as th
 from torch.autograd import Function
+from torch.utils.data import DataLoader
 
 
 class Acosh(Function):
@@ -21,3 +20,11 @@ class Acosh(Function):
 
 
 acosh = Acosh.apply
+
+
+def get_dataloader(dataset,shuffle=False):
+
+    kwargs = {'num_workers': 1, 'pin_memory': True, 'shuffle': shuffle}
+    loader = DataLoader(dataset, batch_size=1, **kwargs)
+
+    return loader

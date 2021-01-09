@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import os
 import torch.nn.functional as F
-
+import torch.nn as nn
 
 import manifolds
 
@@ -83,3 +83,6 @@ class EntailmentConeEnergyFunction(EnergyFunction):
         loss = inp[:, 0].clamp_(min=0).sum()  # positive
         loss += (self.margin - inp[:, 1:]).clamp_(min=0).sum()  # negative
         return loss / inp.numel()
+
+class VideoModel(nn.Module):
+    def __init__(self, manifold, dim, size, args):

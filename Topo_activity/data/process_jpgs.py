@@ -20,31 +20,22 @@ def process_jpgs(csv_path,video_path,out_path_root,class_idx_path):
         if start_frame != end_frame:
             if start_frame == 0: start_frame+=1
             outpath = os.path.join(out_path_root,'v_{}/{}'.format(x['video_id'],class_idx[x['label']]))
-            # xx_ = database[x]["annotations"]
-            # if len(xx_) == 0: continue
-            # for xx in xx_:
-            #     yy = {"videoid": x, "duration": database[x]["duration"],
-            #           "start_time": xx["segment"][0], "end_time": xx["segment"][1]}
-            #
-            #     path = os.path.join(video_path, "v_%s" % yy['videoid'])
-            #     frames_names = glob.glob(os.path.join(path, '*.jpg'))
-            #     nr_frames = len(frames_names)
-            #     fps = (nr_frames * 1.0) / yy['duration']
-            #     start_frame, end_frame = int(yy['start_time'] * fps), int(yy['end_time'] * fps)
-            #
-            #     outpath = os.path.join(out_path_root,'v_{}'.format(yy['videoid']))
-            #
             if not os.path.exists(outpath):
                 os.makedirs(outpath)
-            else:
-                continue
 
             for i in range(start_frame,end_frame):
-                frame_name = os.path.join(video_path,'v_{}'.format(x['video_id']),'image_{}.jpg'.format(str(i).zfill(5)))
-                img = cv2.imread(frame_name,0)
-                if img is None : continue
-                img = cv2.resize(img,(64,64))
-                cv2.imwrite(os.path.join(outpath,'frame_{}.png'.format(i)),img)
+                outname = os.path.join(outpath, 'frame_{}.png'.format(i))
+                # if not os.path.exists(outname):
+                frame_name = os.path.join(video_path, 'v_{}'.format(x['video_id']),
+                                          'image_{}.jpg'.format(str(i).zfill(5)))
+                img = cv2.imread(frame_name, 0)
+                if img is None: continue
+                img = cv2.resize(img, (224, 224))
+                cv2.imwrite(outname, img)
+                # else:
+                #     continue
+
+
 
 
 def flatten(d, sep="_"):
@@ -118,7 +109,7 @@ if __name__=='__main__':
     database = data["database"]
 
     video_path = "/data/Activity_net/Video_jpg"
-    out_path_root = "/data/Activity_net/processed_jpg"
+    out_path_root = "/data/Activity_net/processed_jpg_224"
     class_idx_path = './class_indx.pkl'
     csv_path = './activity_net.csv'
     process_jpgs(csv_path,video_path,out_path_root,class_idx_path)
