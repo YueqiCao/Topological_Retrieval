@@ -23,7 +23,7 @@ def run_train(args):
     val_loader = get_dataloader(val_dataset, False)
 
     # Set up Model
-    model = VideoModel(args)
+    model = VideoModel(args.manifold, args.dim, args.size, args.depth, args)
     model = model.to(args.device)
 
     # Set up Loss
@@ -109,6 +109,9 @@ if __name__=='__main__':
     parser.add_argument('--exp_name', type=str, default='dev')
     parser.add_argument('--exp_root', type=str, default='./experiments')
     parser.add_argument('--restore', type=bool, default=False)
+    # Model
+    parser.add_argument('--manifold', type=str, default='poincare', help='poincare, lorentz, euclidean')
+
     # Dataset
     parser.add_argument('--json_path', type=str, default="../hyperbolic_action-master/activity_net.v1-3.json")
     parser.add_argument('--video_path', type=str, default="/data/Activity_net/processed_jpg_64")

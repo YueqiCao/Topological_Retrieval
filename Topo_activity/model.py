@@ -5,17 +5,20 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 import manifolds
-
+from geoopt.manifolds.stereographic.manifold import PoincareBall
 
 MANIFOLDS = {
     'lorentz': manifolds.LorentzManifold,
     'poincare': manifolds.PoincareManifold,
     'euclidean': manifolds.EuclideanManifold,
+    'geoopt_poincare': PoincareBall
 }
 MODELS = {
     'distance': 'DistanceEnergyFunction',
     'entailment_cones': 'EntailmentConeEnergyFunction',
 }
+def extra_hidden_layer_conv(in_dim, out_dim, non_lin, stride):
+    return nn.Sequential(nn.Conv2d(in_dim, out_dim, 3, stride, 1), non_lin)
 
 def get_model(args, N):
     K = 0.1 if args.model == 'entailment_cones' else None
@@ -85,4 +88,30 @@ class EntailmentConeEnergyFunction(EnergyFunction):
         return loss / inp.numel()
 
 class VideoModel(nn.Module):
-    def __init__(self, manifold, dim, size, args):
+    def __init__(self, manifold, dim, size, depth, args):
+        super(VideoModel).__init__()
+        self.manifold = MANIFOLDS[manifold]
+
+        self.args = args
+        self.dim = dim
+        self.size = size
+        self.depth = depth
+
+        self.enc = self.get_layers()
+        self.fc = nn.Linear(self.size*self.depth,self.dim)
+
+    def get_layers(self):
+        layers = []
+
+        for i in range(self.depth):
+            layers.append(extra_hidden_layer_conv(self.size*i,self.size*(i+1),'relu',2))
+
+        layers = nn.Sequential(*layers)
+        return layers
+
+    def forward(self,x):
+        enc_x = self.enc(x)
+        enc_x = self.fc(enc_x)
+        riem_x = self.manifold.expmap0(enc_x)
+
+        return riem_x
