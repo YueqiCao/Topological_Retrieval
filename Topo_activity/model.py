@@ -89,7 +89,7 @@ class EntailmentConeEnergyFunction(EnergyFunction):
 
 class VideoModel(nn.Module):
     def __init__(self, manifold, dim, size, depth, args):
-        super(VideoModel).__init__()
+        super(VideoModel,self).__init__()
         self.manifold = MANIFOLDS[manifold]
 
         self.args = args
@@ -102,9 +102,10 @@ class VideoModel(nn.Module):
 
     def get_layers(self):
         layers = []
+        non_lin = nn.ReLU(inplace=True)
 
-        for i in range(self.depth):
-            layers.append(extra_hidden_layer_conv(self.size*i,self.size*(i+1),'relu',2))
+        for i in range(1,self.depth):
+            layers.append(extra_hidden_layer_conv(self.size*i,self.size*(i+1), non_lin, 2))
 
         layers = nn.Sequential(*layers)
         return layers

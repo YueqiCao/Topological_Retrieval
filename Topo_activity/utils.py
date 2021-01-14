@@ -22,9 +22,9 @@ class Acosh(Function):
 acosh = Acosh.apply
 
 
-def get_dataloader(dataset,shuffle=False):
+def get_dataloader(dataset, shuffle=False, workers=0):
 
-    kwargs = {'num_workers': 1, 'pin_memory': True, 'shuffle': shuffle}
+    kwargs = {'num_workers': workers, 'pin_memory': True, 'shuffle': shuffle}
     loader = DataLoader(dataset, batch_size=1, **kwargs)
 
     return loader
