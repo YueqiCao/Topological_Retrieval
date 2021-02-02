@@ -46,6 +46,13 @@ class LorentzManifold(Manifold):
         d = x.size(-1) - 1
         return x.narrow(-1, 1, d) / (x.narrow(-1, 0, 1) + 1)
 
+    @staticmethod
+    def distance_wrapper(u,v):
+        u = th.from_numpy(u)
+        v = th.from_numpy(v)
+        d = -LorentzDot.apply(u, v)
+        return acosh(d,1e-5).data.cpu().numpy()
+
     def distance(self, u, v):
         d = -LorentzDot.apply(u, v)
         d.data.clamp_(min=1)

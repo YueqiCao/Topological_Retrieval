@@ -14,6 +14,7 @@ import os
 from PIL import Image
 from tqdm import tqdm
 import cv2
+from model import get_model
 
 class TreeDataset(Dataset):
     def __getitem__(self, index) -> T_co:
@@ -57,8 +58,9 @@ class TreeDataset(Dataset):
 
 
 class VideoDataset(TreeDataset):
-    def __init__(self, json_path, video_path, csv_path, class_idx_path, window=10, mode='training'):
+    def __init__(self, json_path, video_path, csv_path, class_idx_path, args, window=10, mode='training'):
         super(VideoDataset, self).__init__(json_path)
+        self.args = args
         self.video_path = video_path
 
         self.dataframe = pd.read_csv(csv_path)
@@ -72,6 +74,10 @@ class VideoDataset(TreeDataset):
         self.window = window
         self.df['idxs'] = self.window_df()
 
+        self.targets = get_targets(self.args,len(self.objects))
+
+
+
     def __len__(self):
         return len(self.df)
 
@@ -79,12 +85,16 @@ class VideoDataset(TreeDataset):
         entry = self.df.loc[item]
         label = self.class_to_index[entry['label']]
         frames = []
+        target = self.targets[self.objects.index(entry['label'])]
         for i in entry['idxs']:
-            img = cv2.imread(os.path.join(self.video_path,'v_{}'.format(entry['video_id']),str(label),'frame_{}.png'.format(i)),0)
+            img = cv2.imread(os.path.join(self.video_path,'v_{}'.format(entry['video_id']),str(label),'frame_{}.png'.format(i)))
+            # img = img[np.newaxis,...]
             img = img/255
+            img = np.transpose(img,(2,0,1))
             frames.append(torch.from_numpy(img))
+
         frames = torch.stack(frames,0)
-        return frames, label# , entry['index']
+        return frames, target , entry['label'], entry['video_id']
 
 
 
@@ -103,6 +113,46 @@ class VideoDataset(TreeDataset):
 
         return id
 
+
+def get_targets(args, N=273):
+    args.sparse = True
+    args.margin = 0.1
+    model = get_model(args, N)
+    state = torch.load(args.targets_path)
+    model.load_state_dict(state['model'])
+    return model.lt.weight
+
+class FeatureVideoDataset(Dataset):
+    def __init__(self,features_path, mode, args):
+        super(FeatureVideoDataset, self).__init__()
+        self.args = args
+        self.train = torch.load(features_path.format('train'))
+        self.val = torch.load(features_path.format('val'))
+
+        # sum = 0
+        # val =  [self.val[item]['target'] for item in self.val]
+        # train  =  [self.train[item]['target'] for item in self.train]
+        # for valitem in tqdm(val):
+        #
+        #     for item in train:
+        #
+        #         if torch.allclose(valitem, item):
+        #             print('yes')
+        #             sum += 1
+        # print(sum)
+        if mode=='training':
+            self.to_read = self.train
+        else:
+            self.to_read = self.val
+        if mode == 'testing':
+            self.db = get_targets(args)
+
+    def __getitem__(self, item):
+        return self.to_read[item]['features'], self.to_read[item]['target'][0,:]
+
+    def __len__(self):
+        return len(self.to_read)
+
 # FOR TESTING
 if __name__ == '__main__':
     import argparse
@@ -116,6 +166,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     # dataset = TreeDataset(args.json_path)
     dataset = VideoDataset(args.json_path, args.video_path, args.csv_path, args.class_idx_path)
-    # data = dataset.get_graph_dataset()
+    data = dataset.__getitem__(0)
 
 

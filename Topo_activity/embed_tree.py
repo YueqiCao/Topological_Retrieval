@@ -158,7 +158,7 @@ def run_train(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     # Logging
-    parser.add_argument('--exp_name', type=str, default='dev')
+    parser.add_argument('--exp_name', type=str, default='activity_net_lorentz')
     parser.add_argument('--exp_root', type=str, default='./experiments')
     parser.add_argument('--restore', type=bool, default=False)
     # Dataset
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     parser.add_argument('--eval_each', type=int, default=1,
                         help='Run evaluation every n-th epoch')
     parser.add_argument('--burnin', type=int, default=50)
-    parser.add_argument('--epochs', type=int, default=800)
+    parser.add_argument('--epochs', type=int, default=1200)
     # OS
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--train_threads', type=int, default=1,

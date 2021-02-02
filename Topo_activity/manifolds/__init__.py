@@ -8,3 +8,4 @@
 from .lorentz import LorentzManifold  # noqa: F401
 from .poincare import PoincareManifold  # noqa: F401
 from .euclidean import EuclideanManifold  # noqa: F401
+

@@ -18,6 +18,11 @@ class PoincareManifold(EuclideanManifold):
         self.K = K
         if K is not None:
             self.inner_radius = 2 * K / (1 + np.sqrt(1 + 4 * K * self.K))
+    @staticmethod
+    def distance_wrapper(u,v):
+        u = th.from_numpy(u)
+        v = th.from_numpy(v)
+        return Distance.apply(u, v, 1e-5).data.cpu().numpy()
 
     def distance(self, u, v):
         return Distance.apply(u, v, self.eps)
