@@ -18,7 +18,7 @@ def run_feature_extraction(args):
     val_loader =  get_dataloader(val_dataset,False,workers=args.workers,batch_size=args.bath_size)
 
     # Get Feature Extractor
-    feature_extractor = torchvision.models.resnet18(pretrained=True, progress=True)
+    feature_extractor = torchvision.models.resnet34(pretrained=True, progress=True)
     feature_extractor.fc = torch.nn.Identity()
     feature_extractor.to(args.device)
     feature_extractor.eval()
@@ -38,10 +38,10 @@ def run_feature_extraction(args):
         #                              'videoid':videoid
         #
         #     }
-        # torch.save(to_output_train,'./experiments/train_features_window_10.pt')
+        # torch.save(to_output_train,'./experiments/train_features_window_10_res34.pt')
 
         to_output_val = {}
-        for (i, (frames, target, label, videoid)) in tqdm(enumerate(train_loader), total=len(train_dataset)):
+        for (i, (frames, target, label, videoid)) in tqdm(enumerate(val_loader), total=len(val_dataset)):
             frames = frames.to(args.device).float()
             pred = [feature_extractor(frames[:, jj, :, :, :]) for jj in range(frames.shape[1])]
             pred = torch.stack(pred, 1).mean(1)
@@ -53,4 +53,4 @@ def run_feature_extraction(args):
                                   'videoid': videoid
 
                                   }
-        torch.save(to_output_val,'./experiments/val_features_window_10.pt')
+        torch.save(to_output_val,'./experiments/val_features_window_10_res34.pt')

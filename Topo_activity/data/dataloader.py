@@ -15,6 +15,9 @@ from PIL import Image
 from tqdm import tqdm
 import cv2
 from model import get_model
+from torchvision import transforms
+from PIL import Image
+
 
 class TreeDataset(Dataset):
     def __getitem__(self, index) -> T_co:
@@ -76,6 +79,13 @@ class VideoDataset(TreeDataset):
 
         self.targets = get_targets(self.args,len(self.objects))
 
+        self.preprocess = transforms.Compose([
+            transforms.Grayscale(),
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.449], std=[0.226]),
+        ])
 
 
     def __len__(self):
@@ -87,11 +97,16 @@ class VideoDataset(TreeDataset):
         frames = []
         target = self.targets[self.objects.index(entry['label'])]
         for i in entry['idxs']:
+            # img = Image.open(os.path.join(self.video_path,'v_{}'.format(entry['video_id']),str(label),'frame_{}.png'.format(i)))
             img = cv2.imread(os.path.join(self.video_path,'v_{}'.format(entry['video_id']),str(label),'frame_{}.png'.format(i)))
             # img = img[np.newaxis,...]
             img = img/255
             img = np.transpose(img,(2,0,1))
+
+            # img = self.preprocess(img)
+
             frames.append(torch.from_numpy(img))
+            # frames.append(torch.cat([img,img,img]))
 
         frames = torch.stack(frames,0)
         return frames, target , entry['label'], entry['video_id']

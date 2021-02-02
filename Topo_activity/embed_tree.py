@@ -158,7 +158,7 @@ def run_train(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     # Logging
-    parser.add_argument('--exp_name', type=str, default='activity_net_lorentz')
+    parser.add_argument('--exp_name', type=str, default='test')
     parser.add_argument('--exp_root', type=str, default='./experiments')
     parser.add_argument('--restore', type=bool, default=False)
     # Dataset
@@ -170,7 +170,7 @@ if __name__ == '__main__':
 
     # Model
     parser.add_argument('--dim', type=int, default=5, help='Embedding dimension')
-    parser.add_argument('--manifold', type=str, default='lorentz')
+    parser.add_argument('--manifold', type=str, default='euclidean')
     parser.add_argument('--model', type=str, default='distance', help='Energy function model')
     parser.add_argument('--margin', type=float, default=0.1, help='Hinge margin')
     parser.add_argument('--eval', choices=['reconstruction', 'hypernymy'],

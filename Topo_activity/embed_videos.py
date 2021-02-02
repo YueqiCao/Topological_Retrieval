@@ -61,6 +61,7 @@ def run_train(args):
 
     for epoch in range(args.epochs):
         train_epoch_loss = 0
+        model.train()
         for (i,(frames,label)) in tqdm(enumerate(train_loader), total=len(train_loader)):
             frames = frames.to(args.device).float()
             label = label.to(args.device)
@@ -80,6 +81,7 @@ def run_train(args):
         # Now run Validation
         with torch.no_grad():
             val_epoch_loss = 0
+            model.eval()
             for (i, (frames, label)) in tqdm(enumerate(val_loader), total=len(val_loader)):
                 frames = frames.to(args.device).float()
                 label = label.to(args.device)
@@ -137,7 +139,7 @@ def run_test(args):
 
     with torch.no_grad():
         val_epoch_loss = 0
-        for (i, (frames, label)) in tqdm(enumerate(train_loader), total=len(val_loader)):
+        for (i, (frames, label)) in tqdm(enumerate(val_loader), total=len(val_loader)):
             frames = frames.to(args.device).float()
             label = label.to(args.device)
 
@@ -162,13 +164,13 @@ if __name__=='__main__':
     parser.add_argument('--manifold', type=str, default='euclidean', help='poincare, lorentz, euclidean')
     parser.add_argument('--loss', type=str, default='regression')
     parser.add_argument('--dim', type=int, default=5)
-    parser.add_argument('--n_f', type=int, default=100)
-    parser.add_argument('--depth', type=int, default=3)
+    parser.add_argument('--n_f', type=int, default=16)
+    parser.add_argument('--depth', type=int, default=5)
     parser.add_argument('--c', type=float, default=1)
     # Dataset
     parser.add_argument('--use_extracted_features',type=bool,default=True)
     parser.add_argument('--num_extracted_features',type=int,default=512)
-    parser.add_argument('--feature_path',type=str,default='./experiments/{}_features_window_10.pt')
+    parser.add_argument('--feature_path',type=str,default='./experiments/{}_features_window_10_res34.pt')
     parser.add_argument('--json_path', type=str, default="../hyperbolic_action-master/activity_net.v1-3.json")
     parser.add_argument('--video_path', type=str, default="/data/Activity_net/processed_jpg_64")
     parser.add_argument('--csv_path', type=str, default='./activity_net.csv')
