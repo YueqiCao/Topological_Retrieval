@@ -2,7 +2,10 @@ poincare-embeddings-master
 hyperbolic_action-master
 scratch-stuff
 others
+supplement
+supplement.zip
 
+Data
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

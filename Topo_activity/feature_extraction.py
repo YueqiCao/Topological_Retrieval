@@ -26,19 +26,19 @@ def run_feature_extraction(args):
 
     with torch.no_grad():
         to_output_train = {}
-        # for (i, (frames,target, label, videoid)) in tqdm(enumerate(train_loader),total=len(train_dataset)):
-        #     frames = frames.to(args.device).float()
-        #     pred = [feature_extractor(frames[:,jj,:,:,:]) for jj in range(frames.shape[1])]
-        #     pred = torch.stack(pred,1).mean(1)
-        #     pred = torch.mean(pred,dim=0)
-        #
-        #     to_output_train[i] = { 'features' : pred.data.cpu().numpy(),
-        #                             'label' : label,
-        #                            'target': target,
-        #                              'videoid':videoid
-        #
-        #     }
-        # torch.save(to_output_train,'./experiments/train_features_window_10_res34.pt')
+        for (i, (frames,target, label, videoid)) in tqdm(enumerate(train_loader),total=len(train_dataset)):
+            frames = frames.to(args.device).float()
+            pred = [feature_extractor(frames[:,jj,:,:,:]) for jj in range(frames.shape[1])]
+            pred = torch.stack(pred,1).mean(1)
+            pred = torch.mean(pred,dim=0)
+
+            to_output_train[i] = { 'features' : pred.data.cpu().numpy(),
+                                    'label' : label,
+                                   'target': target,
+                                     'videoid':videoid
+
+            }
+        torch.save(to_output_train,'./experiments/train_features_window_{}_res34.pt'.format(args.window))
 
         to_output_val = {}
         for (i, (frames, target, label, videoid)) in tqdm(enumerate(val_loader), total=len(val_dataset)):
@@ -53,4 +53,4 @@ def run_feature_extraction(args):
                                   'videoid': videoid
 
                                   }
-        torch.save(to_output_val,'./experiments/val_features_window_10_res34.pt')
+        torch.save(to_output_val,'./experiments/val_features_window_{}_res34.pt'.format(args.window))

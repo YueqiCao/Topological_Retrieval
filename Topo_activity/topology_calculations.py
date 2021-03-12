@@ -11,6 +11,8 @@ import manifolds.pmath as pmath
 import gudhi
 import gtda
 
+
+
 def get_targets(args, N, targets_path):
     args.sparse = True
     args.margin=0.1

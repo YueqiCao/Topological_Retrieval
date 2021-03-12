@@ -17,7 +17,7 @@ import cv2
 from model import get_model
 from torchvision import transforms
 from PIL import Image
-
+import copy
 
 class TreeDataset(Dataset):
     def __getitem__(self, index) -> T_co:
@@ -79,13 +79,9 @@ class VideoDataset(TreeDataset):
 
         self.targets = get_targets(self.args,len(self.objects))
 
-        self.preprocess = transforms.Compose([
-            transforms.Grayscale(),
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.449], std=[0.226]),
-        ])
+
+        self.to_use = self.flatten_df()
+        self.to_use.to_csv('./data/activity_net_{}_window_{}.csv'.format(mode,self.args.window))
 
 
     def __len__(self):
@@ -111,7 +107,15 @@ class VideoDataset(TreeDataset):
         frames = torch.stack(frames,0)
         return frames, target , entry['label'], entry['video_id']
 
-
+    def flatten_df(self):
+        to_use = pd.DataFrame()
+        for (j, row) in tqdm(self.df.iterrows(), total=len(self.df)):
+            _row = copy.deepcopy(row)
+            for idx in row['idxs']:
+                _row['idxs'] = idx
+                _row['target'] = self.targets[self.objects.index(row['label'])]
+                to_use = to_use.append(_row,ignore_index=True)
+        return to_use
 
     def window_df(self):
         id = []

@@ -154,7 +154,7 @@ def run_test(args):
 if __name__=='__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     # General
-    parser.add_argument('--task', type=str, default='Training', help='Features, Training, Testing')
+    parser.add_argument('--task', type=str, default='Features', help='Features, Training, Testing')
     # Exp Logging
     parser.add_argument('--exp_name', type=str, default='Videos_Euclidean_nf_100_depth_3_lr_5e4')
     parser.add_argument('--exp_root', type=str, default='./experiments/Video_exps')
@@ -165,7 +165,7 @@ if __name__=='__main__':
     parser.add_argument('--loss', type=str, default='regression')
     parser.add_argument('--dim', type=int, default=5)
     parser.add_argument('--n_f', type=int, default=16)
-    parser.add_argument('--depth', type=int, default=5)
+    parser.add_argument('--depth', type=int, default=1)
     parser.add_argument('--c', type=float, default=1)
     # Dataset
     parser.add_argument('--use_extracted_features',type=bool,default=True)
@@ -179,10 +179,10 @@ if __name__=='__main__':
                         default='/vol/medic01/users/av2514/Pycharm_projects/Topological_retrieval'
                                 '/Topo_activity/experiments/activity_net_{}/activity_net_{}.best')
     parser.add_argument('--model',type=str,default='distance')
-    parser.add_argument('--window', type=int, help='window of frames to represent video; -1 for all frames', default=10)
+    parser.add_argument('--window', type=int, help='window of frames to represent video; -1 for all frames', default=20)
     parser.add_argument('--batch_size',type=int,default=32)
     # Optimization
-    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=5e-4, help='Learning rate')
     parser.add_argument('--beta1', type=float, default=0.9, help='first parameter of Adam (default: 0.9)')
     parser.add_argument('--beta2', type=float, default=0.999, help='second parameter of Adam (default: 0.900)')
     parser.add_argument('--epochs', type=int, default=200)
