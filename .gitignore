@@ -5,6 +5,8 @@ others
 supplement
 supplement.zip
 
+*.npz
+
 Data
 # Byte-compiled / optimized / DLL files
 __pycache__/
