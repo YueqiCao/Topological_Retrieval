@@ -1,7 +1,7 @@
 import torch as th
 from torch.autograd import Function
 from torch.utils.data import DataLoader
-
+import pickle
 
 class Acosh(Function):
     @staticmethod
@@ -28,3 +28,14 @@ def get_dataloader(dataset, shuffle=False, workers=0, batch_size=32):
     loader = DataLoader(dataset, batch_size=batch_size, **kwargs)
 
     return loader
+
+
+def pickle_object(object, outpath):
+    fp = open(outpath, "wb")
+    pickle.dump(object, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def read_pickle_object(path):
+    with open(path, 'rb') as handle:
+        b = pickle.load(handle)
+    return b
