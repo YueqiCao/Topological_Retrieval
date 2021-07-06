@@ -48,27 +48,27 @@ def myDissimilarity(X, Y, num_partitions):
 
 # load data
     
-#file_list = ['activity_net_euclidean_cosine.npz','activity_net_euclidean.npz']
-#file_list = ['activity_net_euclidean_expmap_poincare.npz','activity_net_poincare.npz']
-file_list = ['mammals_euclidean_cosine.npz','mammals_euclidean.npz']
-#file_list = ['mammals_euclidean_expmap_poincare.npz','mammals_poincare.npz']
-
-dist_list = [np.load(u)['arr_0'] for u in file_list]
-
-X = dist_list[0][0]
-Y = dist_list[1][0]
-
-X = np.delete(X, -1, axis = 1)
-Y = np.delete(Y, -1, axis = 1)
-
-dilaInv, bottleneckDistance, minBottleneckDistance = myDissimilarity(X, Y, 100)
-
-plt.figure()
-label = ['different dilations','no dilation','optimal dilation']
-plt.xlabel("dilation parameters")
-plt.ylabel("bottleneck distances")
-plt.plot(dilaInv[0:len(dilaInv)-1], bottleneckDistance[0:len(bottleneckDistance)-1])
-# the last element corresponds to no dilation
-plt.axhline(y=bottleneckDistance[-1], color='r', linestyle='-.')
-plt.axhline(y=minBottleneckDistance, color='g', linestyle='-')
-plt.legend(label, loc='best')
+##file_list = ['activity_net_euclidean_cosine.npz','activity_net_euclidean.npz']
+##file_list = ['activity_net_euclidean_expmap_poincare.npz','activity_net_poincare.npz']
+#file_list = ['mammals_euclidean_cosine.npz','mammals_euclidean.npz']
+##file_list = ['mammals_euclidean_expmap_poincare.npz','mammals_poincare.npz']
+#
+#dist_list = [np.load(u)['arr_0'] for u in file_list]
+#
+#X = dist_list[0][0]
+#Y = dist_list[1][0]
+#
+#X = np.delete(X, -1, axis = 1)
+#Y = np.delete(Y, -1, axis = 1)
+#
+#dilaInv, bottleneckDistance, minBottleneckDistance = myDissimilarity(X, Y, 100)
+#
+#plt.figure()
+#label = ['different dilations','no dilation','optimal dilation']
+#plt.xlabel("dilation parameters")
+#plt.ylabel("bottleneck distances")
+#plt.plot(dilaInv[0:len(dilaInv)-1], bottleneckDistance[0:len(bottleneckDistance)-1])
+## the last element corresponds to no dilation
+#plt.axhline(y=bottleneckDistance[-1], color='r', linestyle='-.')
+#plt.axhline(y=minBottleneckDistance, color='g', linestyle='-')
+#plt.legend(label, loc='best')
