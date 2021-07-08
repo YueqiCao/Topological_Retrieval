@@ -9,6 +9,7 @@ import numpy as np
 import main_algorithm as mydist
 import gudhi as gd
 import DI_distance as NS
+import time
 
 np.random.seed(1) 
 num_points = 32 # change this parameter to 64, 128, ... to get different number of points
@@ -26,14 +27,18 @@ Y = np.transpose(np.vstack((Yx, Yy)))
 ori = gd.bottleneck_distance(X, Y)
 
 # DI distance
-
+my_start = time.time()
 shiftInv, bottleneckDistance, minBottleneckDistance = NS.myDistance(X, Y, 100)
-
+my_end = time.time()
+print('NS time is ', my_end-my_start)
 # Don distance
 
 X = [tuple(x) for x in X.tolist()]
 Y = [tuple(x) for x in Y.tolist()]
-DShift = mydist.shifted_bottleneck_distance(X,Y, analysis = False)
 
-print('Don distance is ', DShift)
+don_start = time.time()
+DShift = mydist.shifted_bottleneck_distance(X,Y, analysis = False)
+don_end = time.time()
+
+print('Don distance is ', DShift, '\nDon time is ', don_end-don_start)
 
