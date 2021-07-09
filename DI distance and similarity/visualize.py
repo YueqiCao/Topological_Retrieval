@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import DI_distance as dist
 from sklearn import manifold
+import umap
 
 # load data
     
@@ -32,7 +33,7 @@ for i in range(0,8):
         Dmatrix[i,j] = minBottleneckDistance
 
         
-
+# mds visualization
 mds = manifold.MDS(n_components=2, max_iter=3000, eps=1e-9, random_state=10,
                    dissimilarity="precomputed", n_jobs=1)
 pos = mds.fit(Dmatrix).embedding_
@@ -45,3 +46,26 @@ plt.scatter(pos[4:6, 0], pos[4:6, 1], color='green', label='Ma-Eu')
 plt.scatter(pos[6:8, 0], pos[6:8, 1], color='black', label='Ma-Po')
 label = ['acNet-euclidean','acNet-poincare','mammal-euclidean','mammal-poincare']
 plt.legend(label)
+
+
+# umap visualization
+RANDOM_SEED = 1 
+reducer = umap.UMAP(
+    n_neighbors = 4,       # default: 15
+    n_components = 2,       # 2D atlas
+    metric = 'precomputed', # we have already computed the pairwise distances
+    min_dist = .05,         # default: 0.1
+    spread = 1,             # default: 1
+    random_state = RANDOM_SEED)
+
+embedding = reducer.fit_transform(Dmatrix) 
+
+# Plot the UMAP atlas 
+plt.figure()
+plt.scatter(embedding[0:2, 0], embedding[0:2, 1], color='red', label='Ac-Eu')
+plt.scatter(embedding[2:4, 0], embedding[2:4, 1], color='blue', label='Ac-Po')
+plt.scatter(embedding[4:6, 0], embedding[4:6, 1], color='green', label='Ma-Eu')
+plt.scatter(embedding[6:8, 0], embedding[6:8, 1], color='black', label='Ma-Po')
+label = ['acNet-euclidean','acNet-poincare','mammal-euclidean','mammal-poincare']
+plt.legend(label)
+
